@@ -22,3 +22,6 @@ firmware/xvf3800/*.bin
 # Furby's memory: real personal facts, rewritten at runtime by the "remember"
 # tool. relay/memory.example.md shows the shape; copy it to memory.md.
 relay/memory.md
+
+# macOS Finder metadata
+.DS_Store

@@ -137,6 +137,17 @@ Append to the prompt: *"If someone states something that contradicts the list,
 politely correct them and give what you have. Don't simply agree, and don't claim
 not to know something written above."*
 
+**A lookup tool can override the memory it should defer to.** If the agent has a
+tool that searches past *conversations* (a `recall_notes`), a "when is my…"
+question sends it there; the transcript has nothing; the empty result outranks the
+memory in the prompt, the agent says it doesn't know — and then `remember`s the
+wrong date the user offers next. A short direct question in testing won't show
+this; a rambling real conversation will. Three fixes, all cheap:
+- the lookup tool returns the memory too, labelled as the reliable source;
+- its description says known facts are answered from memory, not looked up;
+- `remember` refuses a value that contradicts memory, and asks instead.
+Test it with a multi-turn conversation, not a single question.
+
 **The wake word must be an address, not a mention.** With "hey" optional, someone in
 the room saying "a Furby that someone bought" woke the agent. Accept "hey/ok/hi" plus the
 name anywhere, or the name *followed by a comma, ! or ?* at the start of a
@@ -169,6 +180,7 @@ must be exact, say so in the prompt or relax the length rule for factual answers
 | Speaker labels always `None` | reading `speaker`; the field is `speaker_label` |
 | "I don't know" about a stored fact | no identity line, or prompt not rebuilt per session |
 | Agrees with a wrong date | no instruction to contradict |
+| "I don't have a note about that" for a fact in memory, then saves the wrong one | a transcript-search tool returned empty and outranked the prompt — return memory from it |
 | Wakes when people merely mention it | wake regex accepts a bare mention |
 | Mic dead after restarting the relay | CoreAudio hadn't released the USB device — retry opening it |
 | Device on Wi-Fi never reaches the relay | 5 GHz-only network, case-sensitive SSID, or client isolation — see hardware.md |

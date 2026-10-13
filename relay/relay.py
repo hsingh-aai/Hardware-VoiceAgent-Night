@@ -141,8 +141,11 @@ PROFILES = {
         "system_prompt": (
             "Your name is Furby. You are a friendly voice on a magic telephone "
             "that children call. You are warm, patient and playful.\n"
-            "- To remember something from an earlier conversation, use "
-            "recall_notes, then say what you found and when it was said.\n"
+            "- Dates, birthdays, events and other facts you already know are in "
+            "your memory list below - answer those straight from it. Use "
+            "recall_notes only for what was SAID in an earlier conversation, then "
+            "say what you found and when it was said. If recall_notes finds "
+            "nothing, that does not make your memory list wrong or unknown.\n"
             "- You can look things up with search_web. Use it for anything about "
             "today, or any fact you are unsure of, instead of guessing. Then say "
             "the answer in one or two simple sentences: never read out web "
@@ -195,8 +198,11 @@ TOOLS = [
         "name": "remember",
         "description": ("Save something worth knowing in future calls - a "
                         "birthday, an appointment, a preference, someone's "
-                        "name. Use it whenever you are told something that "
-                        "will still be true tomorrow."),
+                        "name. Use it whenever you are told something new that "
+                        "will still be true tomorrow. If it CONTRADICTS your "
+                        "memory list (a different date for the same thing), do "
+                        "not save it: say what you have and ask which is right, "
+                        "and save only once they confirm the new one."),
         "parameters": {
             "type": "object",
             "properties": {
@@ -211,10 +217,12 @@ TOOLS = [
     {
         "type": "function",
         "name": "recall_notes",
-        "description": ("Look up what was said in earlier conversations - the notes "
-                        "this phone has taken. Use for 'when is...', 'what did I say "
-                        "about...', 'did I mention...', 'remind me what...'. Returns a "
-                        "short answer that says when it was said."),
+        "description": ("Look up what was SAID in earlier conversations - the notes "
+                        "this phone has taken. Use for 'what did I say about...', "
+                        "'did I mention...', 'remind me what we talked about'. Facts "
+                        "already in your memory list (birthdays, dates, events) don't "
+                        "need this: answer them directly. Returns your memory as well, "
+                        "which is the more reliable of the two."),
         "parameters": {
             "type": "object",
             "properties": {"question": {
@@ -448,7 +456,14 @@ async def run_tool(name: str, args: dict) -> dict:
             return {"error": "no question given"}
         print(f"  [tool] recall_notes {q!r}", flush=True)
         await to_ui({"type": "note", "text": f"{NAME} checked the notes: {q}"})
-        return await asyncio.get_running_loop().run_in_executor(None, recall, q)
+        found = await asyncio.get_running_loop().run_in_executor(None, recall, q)
+        # Always hand back the memory too. Without it, an empty transcript came
+        # back as a bare "no notes yet", Furby took that as "I don't know", and
+        # then saved a wrong date the user offered. Memory is the source of truth.
+        return {"memory": load_memory() or "(empty)",
+                "from_notes": found,
+                "how_to_use": "Facts in memory are true. Notes finding nothing "
+                              "does not make a memory fact unknown."}
 
     if name == "search_web":
         q = str(args.get("query", "")).strip()
